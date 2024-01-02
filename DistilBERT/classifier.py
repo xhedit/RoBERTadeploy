@@ -1,37 +1,64 @@
-import json
-with open("config.json") as json_file:
-	config = json.load(json_file)
+# run with "uvicorn DistilRoBERTa.api:app"
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import torch
-import torch.nn.functional as F
+# config not used now
 
-class BERTClassifier():
+#import json
+#with open("config.json") as json_file:
+#	config = json.load(json_file)
+
+#from transformers import AutoTokenizer, AutoModelForSequenceClassification
+#import torch
+#import torch.nn.functional as F
+
+from transformers import pipeline
+import pprint
+
+
+class DistilRoBERTaClassifier():
 
 	def __init__(self):
-		self.tokenizer = AutoTokenizer.from_pretrained(
-			"distilbert-base-uncased-finetuned-sst-2-english")
-		self.model = AutoModelForSequenceClassification.from_pretrained(
-			"distilbert-base-uncased-finetuned-sst-2-english")
+		self.pipeline = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", return_all_scores=True)
 
-	def predict(self, text):
-		tokens = self.tokenizer(text, max_length = config["MAX_TOKENS_LEN"], 
-			padding = True, return_tensors = "pt")
+	# not working right now
+	def batch_predict(self, texts, req_ids):
 
-		with torch.no_grad():
-			probabilities = F.softmax(self.model(**tokens)['logits'], dim=1)
+		pp = pprint.PrettyPrinter()
 
-		confidence, predicted_class = torch.max(probabilities, dim=1)
-		predicted_class = predicted_class.cpu().item()
-		probabilities = probabilities.flatten().cpu().numpy().tolist()
+		result = self.pipeline(texts)
+		print("result")
+		pp.pprint(result)
 
-		return (
-			config["CLASS_NAMES"][predicted_class],
-			confidence,
-			dict(zip(config["CLASS_NAMES"], probabilities)),
-		)
+		scores = []
+		for i, outerlst in enumerate(result):
+			current_scores = {}
+			for score_dict in outerlst:
 
-bert = BERTClassifier()
+				classification = score_dict["label"]
+				current_scores[classification] = score_dict["score"]
+				print("label")
+				print(classification)
+				print("score")
+				print(current_scores[classification])
+			scores["req_id"] = req_ids[i]
+			scores.append(current_scores)
+
+		print("scores")
+		pp.pprint(scores)
+
+		return scores
+
+	def predict(self, text, req_id):
+
+		result = self.pipeline(text)
+
+		scores = {}
+		for outerlst in result:
+			for score_dict in outerlst:
+				classification = score_dict["label"]
+				scores[classification] = score_dict["score"]
+		return (req_id, scores)
+
+berta = DistilRoBERTaClassifier()
 
 def get_bert():
-	return bert
+	return berta
