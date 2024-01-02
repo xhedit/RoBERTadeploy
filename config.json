@@ -1,7 +1,12 @@
 {
     "CLASS_NAMES": [
-        "negative",
-        "positive"
+        "anger",
+	"disgust",
+	"fear",
+        "joy",
+	"neutral",
+	"sadness",
+	"surprise"
     ],
-    "MAX_TOKENS_LEN": 160
+    "MAX_TOKENS_LEN": 400
 }
